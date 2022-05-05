@@ -3,7 +3,7 @@ import { PokemonDetail as IPokemonDetail } from "../../interfaces";
 import { ParsedUrlQuery } from "querystring";
 
 import { PokemonDetail } from "../../components/pokemon/PokemonDetail";
-import pokeApi from "../../api/pokeApi";
+import pokeApi, { getPokemonInfo } from "../../api/pokeApi";
 
 interface Props {
   pokemon: IPokemonDetail;
@@ -20,8 +20,6 @@ const PokemonByNamePage: NextPage<Props> = ({ pokemon }) => {
 export const getStaticPaths: GetStaticPaths = async (ctx) => {
   const { data } = await pokeApi.get(`/pokemon?limit=151`);
 
-  console.log(data);
-
   const authPaths = data.results.map((value: IPokemonDetail, idx: number) => {
     const { name } = value;
 
@@ -34,7 +32,7 @@ export const getStaticPaths: GetStaticPaths = async (ctx) => {
 
   return {
     paths: authPaths,
-    fallback: false,
+    fallback: "blocking",
   };
 };
 
@@ -43,19 +41,23 @@ interface IParams extends ParsedUrlQuery {
 }
 
 export const getStaticProps: GetStaticProps = async ({ params }) => {
-  const { name: paramName } = params as IParams;
-  const { data } = await pokeApi.get<IPokemonDetail>(`/pokemon/${paramName}`);
+  const { name } = params as IParams;
+  const pokemon = await getPokemonInfo(name);
 
-  const { id, name, sprites } = data;
+  if (!pokemon) {
+    return {
+      redirect: {
+        destination: "/",
+        permanent: false,
+      },
+    };
+  }
 
   return {
     props: {
-      pokemon: {
-        id,
-        name,
-        sprites,
-      },
+      pokemon,
     },
+    revalidate: 86400,
   };
 };
 
