@@ -1,19 +1,15 @@
-import { GetStaticProps, NextPage, GetStaticPaths } from "next";
-
+import { GetStaticPaths, GetStaticProps, NextPage } from "next";
 import { PokemonDetail as IPokemonDetail } from "../../interfaces";
 import { ParsedUrlQuery } from "querystring";
 
 import { PokemonDetail } from "../../components/pokemon/PokemonDetail";
-
 import pokeApi from "../../api/pokeApi";
+
 interface Props {
   pokemon: IPokemonDetail;
 }
 
-const Pokemon: NextPage<Props> = ({ pokemon }) => {
-  // const router = useRouter();
-  // console.log(router.query);
-
+const PokemonByNamePage: NextPage<Props> = ({ pokemon }) => {
   return (
     <>
       <PokemonDetail pokemon={pokemon} />
@@ -22,10 +18,16 @@ const Pokemon: NextPage<Props> = ({ pokemon }) => {
 };
 
 export const getStaticPaths: GetStaticPaths = async (ctx) => {
-  const authPaths = [...Array(150)].map((value, idx) => {
+  const { data } = await pokeApi.get(`/pokemon?limit=151`);
+
+  console.log(data);
+
+  const authPaths = data.results.map((value: IPokemonDetail, idx: number) => {
+    const { name } = value;
+
     return {
       params: {
-        id: String(idx + 1),
+        name: name,
       },
     };
   });
@@ -37,13 +39,14 @@ export const getStaticPaths: GetStaticPaths = async (ctx) => {
 };
 
 interface IParams extends ParsedUrlQuery {
-  id: string;
+  name: string;
 }
 
 export const getStaticProps: GetStaticProps = async ({ params }) => {
-  const { id } = params as IParams;
-  const { data } = await pokeApi.get<IPokemonDetail>(`/pokemon/${id}`);
-  const { name, sprites } = data;
+  const { name: paramName } = params as IParams;
+  const { data } = await pokeApi.get<IPokemonDetail>(`/pokemon/${paramName}`);
+
+  const { id, name, sprites } = data;
 
   return {
     props: {
@@ -56,4 +59,4 @@ export const getStaticProps: GetStaticProps = async ({ params }) => {
   };
 };
 
-export default Pokemon;
+export default PokemonByNamePage;
